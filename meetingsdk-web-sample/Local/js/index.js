@@ -1,4 +1,7 @@
 import { ZoomMtg } from "@zoom/meetingsdk";
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 const authEndpoint = "http://127.0.0.1:4000";
 
