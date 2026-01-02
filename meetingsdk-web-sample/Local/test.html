@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zoom SDK Test Page</title>
+    <meta charset="utf-8" />
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 { margin-top: 0; }
+        .status { 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .success { background: rgba(76, 175, 80, 0.5); }
+        .error { background: rgba(244, 67, 54, 0.5); }
+        button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { transform: scale(1.05); }
+        #zmmtg-root {
+            display: none;
+            width: 100%;
+            height: 600px;
+            margin-top: 20px;
+            background: #000;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 Zoom SDK Diagnostic Test</h1>
+        
+        <div class="status" id="sdk-status">
+            ⏳ Checking Zoom SDK...
+        </div>
+        
+        <div class="status" id="auth-status">
+            ⏳ Checking Auth Server...
+        </div>
+        
+        <div class="status" id="meeting-status">
+            ℹ️ Ready to test meeting join
+        </div>
+        
+        <button onclick="testMeeting()">🚀 Test Meeting Join</button>
+        <button onclick="location.href='/'">← Back to Main</button>
+        
+        <div id="zmmtg-root"></div>
+    </div>
+
+    <script src="node_modules/react/umd/react.production.min.js"></script>
+    <script src="node_modules/react-dom/umd/react-dom.production.min.js"></script>
+    <script src="node_modules/redux/dist/redux.min.js"></script>
+    <script src="node_modules/redux-thunk/dist/redux-thunk.min.js"></script>
+    <script src="./static/index.min.js"></script>
+    
+    <script>
+        // Check if Zoom SDK loaded
+        setTimeout(() => {
+            const sdkStatus = document.getElementById('sdk-status');
+            if (typeof ZoomMtg !== 'undefined') {
+                sdkStatus.className = 'status success';
+                sdkStatus.innerHTML = '✅ Zoom SDK Loaded Successfully';
+                console.log('SDK Version:', ZoomMtg.getWebSDKVersion());
+            } else {
+                sdkStatus.className = 'status error';
+                sdkStatus.innerHTML = '❌ Zoom SDK Failed to Load';
+            }
+        }, 1000);
+
+        // Check auth server
+        fetch('http://127.0.0.1:4000/health')
+            .then(res => res.json())
+            .then(data => {
+                const authStatus = document.getElementById('auth-status');
+                authStatus.className = 'status success';
+                authStatus.innerHTML = '✅ Auth Server Running: ' + data.message;
+            })
+            .catch(err => {
+                const authStatus = document.getElementById('auth-status');
+                authStatus.className = 'status error';
+                authStatus.innerHTML = '❌ Auth Server Not Responding';
+            });
+
+        function testMeeting() {
+            const meetingStatus = document.getElementById('meeting-status');
+            meetingStatus.innerHTML = '⏳ Testing meeting join...';
+            
+            // Test meeting ID (use a real one)
+            const testMeetingNumber = prompt('Enter Meeting ID:', '9873153576');
+            const testPassword = prompt('Enter Password (if any):', '12ll2d');
+            
+            if (!testMeetingNumber) {
+                meetingStatus.className = 'status error';
+                meetingStatus.innerHTML = '❌ No meeting ID provided';
+                return;
+            }
+
+            // Try to get signature
+            fetch('http://127.0.0.1:4000', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    meetingNumber: testMeetingNumber,
+                    role: 0
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.signature) {
+                    meetingStatus.className = 'status success';
+                    meetingStatus.innerHTML = '✅ Signature generated! Redirecting to meeting...';
+                    
+                    // Redirect to meeting page
+                    const url = `/meeting.html?name=${encodeURIComponent('Test User')}&mn=${testMeetingNumber}&pwd=${testPassword}&email=&role=0&lang=en-US&signature=${data.signature}`;
+                    setTimeout(() => {
+                        window.location.href = url;
+                    }, 1500);
+                } else {
+                    throw new Error('No signature received');
+                }
+            })
+            .catch(err => {
+                meetingStatus.className = 'status error';
+                meetingStatus.innerHTML = '❌ Failed to generate signature: ' + err.message;
+            });
+        }
+    </script>
+</body>
+</html>
